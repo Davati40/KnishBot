@@ -3,7 +3,6 @@ from discord.ext import commands
 import logging
 
 
-OwnerID = 172512854317072386
 description = '''Knish The Dog In Bot Form.
 Please Use All Lowercase Letters.'''
 bot = commands.Bot(command_prefix='>', description=description)
