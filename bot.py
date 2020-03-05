@@ -2,12 +2,11 @@ import discord
 from discord.ext import commands
 import logging
 
-bot = commands.Bot(command_prefix='>')
 logging.basicConfig(level=logging.INFO)
 
+bot = commands.Bot(command_prefix='>')
 description = '''Knish The Dog In Bot Form. Please Use All Lowercase Letters.'''
-
-activity = discord.Game(name="nothing. I'm napping.")
+activity = discord.Game(name="nothing. I'm napping. >help")
 
 @bot.event
 async def on_ready():
@@ -61,7 +60,7 @@ async def squirrel(ctx):
 @bot.command()
 async def add(ctx):
   '''Add Me To A Server.'''
-  await ctx.send('https://discordapp.com/api/oauth2/authorize?client_id=413728059645100039&permissions=36957248&scope=bot')
+  await ctx.send('ENTER_INVITE_URL_HERE')
 
 
 
@@ -130,4 +129,4 @@ async def spotted(ctx):
   await ctx.send('https://i.imgur.com/6UTehGk.jpg')
 
 
-bot.run('INSERT_CODE_HERE')
+bot.run('ENTER_TOKEN_HERE)
