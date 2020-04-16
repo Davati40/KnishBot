@@ -60,11 +60,12 @@ async def squirrel(ctx):
 @bot.command()
 async def add(ctx):
   '''Add Me To A Server.'''
-  await ctx.send('ENTER_INVITE_URL_HERE')
+  await ctx.send('ENTER_INVITE_URL_HERE') #Insert your bot's URL here
 
 
 
 # 'Cool' Command
+# >cool "name" - If name is not in the list below, Knish will say "Growl..!"
 
 @bot.group(pass_context=True)
 async def cool(ctx):
@@ -82,10 +83,10 @@ async def _bot(ctx):
 async def _bot(ctx):
     await ctx.send('*Happy Bork!*')
 
-
-@cool.command(name='whatever you want to say')
+# You can copy and paste the next 3 lines to add more to this command
+@cool.command(name='whatever you want to say') #Change the name here
 async def _bot(ctx):
-    await ctx.send('Growl..!')
+    await ctx.send('Growl..!') #Customize what Knish's response is here
 
 
 
@@ -129,4 +130,4 @@ async def spotted(ctx):
   await ctx.send('https://i.imgur.com/6UTehGk.jpg')
 
 
-bot.run('ENTER_TOKEN_HERE)
+bot.run('ENTER_TOKEN_HERE')
