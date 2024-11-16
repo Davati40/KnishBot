@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import logging
+import platform
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,6 +17,7 @@ async def on_ready():
     print('Logged in as:\n{0} (ID:{0.id})'.format(bot.user))
     print('------')
     print('Running API Version:' + discord.__version__)
+    print('Running Python Version:' + platform.python_version())
     print('------')
     print('')
 
