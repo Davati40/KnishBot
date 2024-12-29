@@ -3,66 +3,100 @@ from discord.ext import commands
 import logging
 import platform
 
-logging.basicConfig(level=logging.INFO)
+class LoggingFormatter(logging.Formatter):
+    # Colors
+    black = "\x1b[30m"
+    red = "\x1b[31m"
+    green = "\x1b[32m"
+    yellow = "\x1b[33m"
+    blue = "\x1b[34m"
+    gray = "\x1b[38m"
+    # Styles
+    reset = "\x1b[0m"
+    bold = "\x1b[1m"
 
-bot = commands.Bot(command_prefix='>')
-description = '''Knish The Dog In Bot Form. Please Use All Lowercase Letters.'''
-activity = discord.Game(name="nothing. I'm napping. >help")
+    COLORS = {
+        logging.DEBUG: gray + bold,
+        logging.INFO: blue + bold,
+        logging.WARNING: yellow + bold,
+        logging.ERROR: red,
+        logging.CRITICAL: red + bold,
+    }
+
+    def format(self, record):
+        log_color = self.COLORS[record.levelno]
+        format = "(black){asctime}(reset) (levelcolor){levelname:<8}(reset) (green){name}(reset) {message}"
+        format = format.replace("(black)", self.black + self.bold)
+        format = format.replace("(reset)", self.reset)
+        format = format.replace("(levelcolor)", log_color)
+        format = format.replace("(green)", self.green + self.bold)
+        formatter = logging.Formatter(format, "%Y-%m-%d %H:%M:%S", style="{")
+        return formatter.format(record)
+
+
+logger = logging.getLogger("discord_bot")
+logger.setLevel(logging.INFO)
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix=commands.when_mentioned_or('$'),
+                   intents=intents,
+                   case_insensitive=True,
+                   allowed_mentions=discord.AllowedMentions(everyone=False))
+description = 'Knish The Dog In Bot Form'
+activity = discord.Game(name="nothing. I'm napping. $help")
 
 @bot.event
 async def on_ready():
     await bot.change_presence(activity=activity)
     print('')
     print('------')
-    print('Logged in as:\n{0} (ID:{0.id})'.format(bot.user))
+    print(f"{LoggingFormatter.blue}Logged in as:")
+    print(f"{LoggingFormatter.yellow}{bot.user}{LoggingFormatter.reset}")
     print('------')
-    print('Running API Version:' + discord.__version__)
-    print('Running Python Version:' + platform.python_version())
+    print(f"{LoggingFormatter.blue}Running API Version: {LoggingFormatter.yellow}{discord.__version__}{LoggingFormatter.reset}")
+    print(f"{LoggingFormatter.blue}Running Python Version: {LoggingFormatter.yellow}{platform.python_version()}{LoggingFormatter.reset}")
     print('------')
     print('')
 
 
-# General Commands
+#General Commands
 
 @bot.command()
 async def hi(ctx):
-    '''Say Hi To Me.'''
+    'Say Hi To Me'
     await ctx.send('Woof!')
 
 @bot.command()
 async def aww(ctx):
-    '''Basicly saying I'm Cute.'''
+    "Basicly saying I'm Cute"
     await ctx.send('Happy Woof!')
 
 @bot.command()
 async def bork(ctx):
-    '''Says 'bork' To Me.'''
+    "Says 'bork' To Me"
     await ctx.send('*runs around house at top speed*')
 
 @bot.command()
 async def quiet(ctx):
-    '''Tells Me To Be Quiet.'''
+    'Tells Me To Be Quiet'
     await ctx.send('Loud Bark!')
 
 @bot.command()
 async def sit(ctx):
-    '''Tells Me To Sit.'''
+    'Tells Me To Sit'
     await ctx.send('*lays*')
 
 @bot.command()
 async def lay(ctx):
-    '''Tells Me To Lay Down.'''
+    'Tells Me To Lay Down'
     await ctx.send('*sits*')
 
 @bot.command()
 async def squirrel(ctx):
-    '''Did Somebody Say Squirrel?!'''
-    await ctx.send('OMG SQUIRREL WHAT WHERE')
-
-@bot.command()
-async def add(ctx):
-  '''Add Me To A Server.'''
-  await ctx.send('ENTER_INVITE_URL_HERE') #Insert your bot's URL here
+    'Did Somebody Say Squirrel?!'
+    await ctx.send('OMG SQUIRREL? WHERE??')
 
 
 
@@ -71,7 +105,7 @@ async def add(ctx):
 
 @bot.group(pass_context=True)
 async def cool(ctx):
-    """Says If Someone Is Cool."""
+    'Says If Someone Is Cool'
     if ctx.invoked_subcommand is None:
         await ctx.send('Growl..!'.format(ctx))
 
@@ -96,40 +130,35 @@ async def _bot(ctx):
 
 @bot.command()
 async def sleep(ctx):
-  '''Shows Me Sleeping.'''
+  'Shows Me Sleeping'
   await ctx.send('https://i.imgur.com/Dwr7SE2.jpg')
-
-@bot.command()
-async def god(ctx):
-  '''Shows Me In My True Form.'''
-  await ctx.send('https://i.imgur.com/1ALnOwp.jpg')
 
 
 @bot.command()
 async def alert(ctx):
-  '''Shows Me Being Alert (and definately not scared).'''
+  'Shows Me Being Alert (and definately not scared)'
   await ctx.send('https://i.imgur.com/sfmwytD.jpg')
 
 
 @bot.command()
 async def hello(ctx):
-    '''Shows Me Being Friendly.'''
+    'Shows Me Being Friendly'
     await ctx.send('https://i.imgur.com/LOrTu7N.jpg')
 
 @bot.command()
 async def snow(ctx):
-    '''Shows Me Walking Through Snow.'''
+    'Shows Me Walking Through Snow'
     await ctx.send('https://i.imgur.com/xYWit3A.jpg')
 
 @bot.command()
 async def sun(ctx):
-  '''Shows Me Sunbathing.'''
+  'Shows Me Sunbathing'
   await ctx.send('https://i.imgur.com/ykjEPtZ.jpg')
 
 @bot.command()
 async def spotted(ctx):
-  '''I've Been Seen!'''
+  "I've Been Seen!"
   await ctx.send('https://i.imgur.com/6UTehGk.jpg')
 
 
-bot.run('ENTER_TOKEN_HERE')
+bot.run('TOKEN')
