@@ -9,12 +9,13 @@ from mcstatus import BedrockServer, JavaServer
 logger = logging.getLogger("discord_bot")
 
 DEFAULT_MC_SERVER = os.getenv("DEFAULT_MC_SERVER", "localhost")
-DATA_FILE = "servers.json"
+os.makedirs("data", exist_ok=True)
+DATA_FILE = "data/servers.json"
 
 class MinecraftCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        # Structure: { channel_id_str: {"address": "play.hypixel.net", "bedrock": False, "category_id": 123456} }
+        # Structure: { channel_id_str: {"address": "paper.local.xyz", "display_name": "paper.xyz", "bedrock": False, "category_id": 123456} }
         self.monitored_servers = self.load_servers()
         self.update_status_task.start()
 
@@ -44,17 +45,27 @@ class MinecraftCog(commands.Cog):
         description="Create a category and status channel for a Minecraft server"
     )
     @app_commands.describe(
-        address="The IP/domain of the server (e.g., play.hypixel.net)",
+        address="The IP/domain the bot pings (e.g., paper.local.willowwood.xyz)",
+        display_name="Custom IP/name shown in Category title (e.g., paper.willowwood.xyz)",
         bedrock="Set to True if this is a Bedrock server (default: False)"
     )
     @app_commands.checks.has_permissions(administrator=True)
-    async def mcsetup(self, interaction: discord.Interaction, address: str = DEFAULT_MC_SERVER, bedrock: bool = False):
+    async def mcsetup(
+        self, 
+        interaction: discord.Interaction, 
+        address: str = DEFAULT_MC_SERVER, 
+        display_name: str | None = None,
+        bedrock: bool = False
+    ):
         await interaction.response.defer()
 
         guild = interaction.guild
         if not guild:
             await interaction.followup.send("This command can only be used in a server.")
             return
+
+        # Fallback to address if no custom display name is provided
+        shown_name = display_name if display_name else address
 
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(
@@ -68,8 +79,8 @@ class MinecraftCog(commands.Cog):
             )
         }
 
-        # 1. Create Category titled with the IP
-        category_name = f"IP: {address}"
+        # 1. Create Category titled with the custom display name
+        category_name = f"IP: {shown_name}"
         category = await guild.create_category(name=category_name)
 
         # 2. Create Locked Voice Channel under the category
@@ -82,13 +93,14 @@ class MinecraftCog(commands.Cog):
         # 3. Store server configuration
         self.monitored_servers[str(channel.id)] = {
             "address": address,
+            "display_name": shown_name,
             "bedrock": bedrock,
             "category_id": category.id
         }
         self.save_servers()
 
         await interaction.followup.send(
-            f"✅ Created category **{category_name}** and channel {channel.mention}! Status will update every 5 minutes."
+            f"✅ Created category **{category_name}** pointing to `{address}`! Status will update every 5 minutes."
         )
 
         # Immediately update the new channel
@@ -99,19 +111,20 @@ class MinecraftCog(commands.Cog):
         name="mcremove",
         description="Stop monitoring a Minecraft server and remove its category/channel"
     )
-    @app_commands.describe(address="The IP address of the server to remove")
+    @app_commands.describe(identifier="The internal IP or display name of the server to remove")
     @app_commands.checks.has_permissions(administrator=True)
-    async def mcremove(self, interaction: discord.Interaction, address: str):
+    async def mcremove(self, interaction: discord.Interaction, identifier: str):
         await interaction.response.defer()
 
         to_delete = None
         for channel_id, data in self.monitored_servers.items():
-            if data["address"].lower() == address.lower():
+            if (data["address"].lower() == identifier.lower() or 
+                data.get("display_name", "").lower() == identifier.lower()):
                 to_delete = channel_id
                 break
 
         if not to_delete:
-            await interaction.followup.send(f"No monitored server found with IP `{address}`.")
+            await interaction.followup.send(f"No monitored server found matching `{identifier}`.")
             return
 
         data = self.monitored_servers.pop(to_delete)
@@ -126,7 +139,7 @@ class MinecraftCog(commands.Cog):
         if category:
             await category.delete()
 
-        await interaction.followup.send(f"🗑️ Stopped monitoring **{address}** and removed its category/channel.")
+        await interaction.followup.send(f"🗑️ Stopped monitoring **{data.get('display_name', data['address'])}** and removed its category/channel.")
 
     # --- STATUS UPDATE LOGIC ---
     async def fetch_server_status(self, address: str, bedrock: bool = False) -> str:
