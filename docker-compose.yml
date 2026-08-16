@@ -1,6 +1,6 @@
 services:
   knishbot:
-    image: python:3.11-slim
+    image: python:latest
     container_name: knishbot
     restart: unless-stopped
     working_dir: /app
