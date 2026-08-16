@@ -4,4 +4,4 @@ services:
     container_name: knishbot
     restart: unless-stopped
     environment:
-      - DISCORD_TOKEN=NDEzNzI4MDU5NjQ1MTAwMDM5.GKQei8._VtA7JRbadJOcTP3YJxsnlevCRnkVayQnseEzs
+      - DISCORD_TOKEN="NDEzNzI4MDU5NjQ1MTAwMDM5.GKQei8._VtA7JRbadJOcTP3YJxsnlevCRnkVayQnseEzs"
