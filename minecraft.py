@@ -49,7 +49,7 @@ class MinecraftCog(commands.Cog):
         display_name="Custom IP/name shown in Category title (e.g., paper.willowwood.xyz)",
         bedrock="Set to True if this is a Bedrock server (default: False)"
     )
-    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.checks.has_permissions(manage_channels=True)
     async def mcsetup(
         self, 
         interaction: discord.Interaction, 
@@ -112,7 +112,7 @@ class MinecraftCog(commands.Cog):
         description="Stop monitoring a Minecraft server and remove its category/channel"
     )
     @app_commands.describe(identifier="The internal IP or display name of the server to remove")
-    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.checks.has_permissions(manage_channels=True)
     async def mcremove(self, interaction: discord.Interaction, identifier: str):
         await interaction.response.defer()
 
