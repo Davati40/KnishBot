@@ -59,7 +59,4 @@ class MinecraftCog(commands.Cog):
             await interaction.followup.send(embed=embed)
 
 async def setup(bot: commands.Bot):
-    cog = MinecraftCog(bot)
-    await bot.add_cog(cog)
-    # Explicitly add the command to the bot's slash command tree
-    bot.tree.add_command(cog.mcstatus)
+    await bot.add_cog(MinecraftCog(bot))
