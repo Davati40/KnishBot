@@ -6,3 +6,5 @@ services:
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - DEFAULT_MC_SERVER${DEFAULT_MC_SERVER}
+    volumes:
+      - /home/administrator/docker/knishbot:/data #Set this to where your JSON file is for Minecraft server logging
