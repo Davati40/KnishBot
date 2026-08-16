@@ -1,6 +1,6 @@
 services:
   knishbot:
-    build: .
+    image: python:latest
     container_name: knishbot
     restart: unless-stopped
     environment:
