@@ -4,7 +4,6 @@ from discord import app_commands
 from discord.ext import commands
 from mcstatus import BedrockServer, JavaServer
 
-# Default MC Server address (Set via environment variable in Portainer or fallback)
 DEFAULT_MC_SERVER = os.getenv("DEFAULT_MC_SERVER", "localhost")
 
 class MinecraftCog(commands.Cog):
@@ -60,4 +59,7 @@ class MinecraftCog(commands.Cog):
             await interaction.followup.send(embed=embed)
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(MinecraftCog(bot))
+    cog = MinecraftCog(bot)
+    await bot.add_cog(cog)
+    # Explicitly add the command to the bot's slash command tree
+    bot.tree.add_command(cog.mcstatus)
