@@ -1,22 +1,30 @@
+import os
 import discord
 from discord import app_commands
 from discord.ext import commands
 from mcstatus import BedrockServer, JavaServer
 
+# Default MC Server address (Set via environment variable in Portainer or fallback)
+DEFAULT_MC_SERVER = os.getenv("DEFAULT_MC_SERVER", "localhost")
+
 class MinecraftCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
-        bot = bot
+        self.bot = bot
 
     @app_commands.command(
         name="mcstatus",
-        description="Check the online status and player count of a Minecraft server"
+        description="Check the status of a Minecraft server"
     )
     @app_commands.describe(
-        address="The IP address or domain of the server (e.g. play.hypixel.net)",
+        address="The IP/domain of the server (Leave blank for default server)",
         bedrock="Set to True if this is a Bedrock/MCPE server (default: False)"
     )
-    async def mcstatus(self, interaction: discord.Interaction, address: str, bedrock: bool = False):
-        # Defer response since querying a server over network can take a second
+    async def mcstatus(
+        self, 
+        interaction: discord.Interaction, 
+        address: str = DEFAULT_MC_SERVER, 
+        bedrock: bool = False
+    ):
         await interaction.response.defer()
 
         try:
@@ -37,7 +45,6 @@ class MinecraftCog(commands.Cog):
             embed.add_field(name="Latency", value=f"{round(status.latency)} ms", inline=True)
 
             if hasattr(status, "motd") and status.motd:
-                # Clean up MOTD formatting if present
                 motd_text = status.motd.to_plain() if hasattr(status.motd, "to_plain") else str(status.motd)
                 embed.description = f"```\n{motd_text.strip()}\n```"
 
