@@ -151,4 +151,8 @@ async def spotted(interaction: discord.Interaction):
 
 
 if __name__ == "__main__":
-    bot.run('TOKEN')
+    token = os.getenv("DISCORD_TOKEN")
+    if not token:
+        logger.critical("DISCORD_TOKEN environment variable not found!")
+    else:
+        bot.run(token)
