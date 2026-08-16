@@ -54,6 +54,10 @@ class KnishBot(commands.Bot):
         # Register command groups
         self.tree.add_command(CoolGroup(name="cool", description="Says if someone is cool"))
         
+        # Load external Minecraft Cog extension
+        await self.load_extension("minecraft")
+        logger.info("Loaded Minecraft cog extension.")
+
 bot = KnishBot()
 
 @bot.event
