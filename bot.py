@@ -40,6 +40,7 @@ logger.addHandler(console_handler)
 
 # --- Bot Setup ---
 intents = discord.Intents.default()
+intents.message_content = True
 
 class KnishBot(commands.Bot):
     def __init__(self):
