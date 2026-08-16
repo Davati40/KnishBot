@@ -26,12 +26,8 @@ class LoggingFormatter(logging.Formatter):
 
     def format(self, record):
         log_color = self.COLORS.get(record.levelno, self.reset)
-        fmt = "(black){asctime}(reset) (levelcolor){levelname:<8}(reset) (green){name}(reset) {message}"
-        fmt = fmt.replace("(black)", self.black + self.bold)
-        fmt = fmt.replace("(reset)", self.reset)
-        fmt = fmt.replace("(levelcolor)", log_color)
-        fmt = fmt.replace("(green)", self.green + self.bold)
-        formatter = logging.Formatter(fmt, "%Y-%m-%d %H:%M:%S", style="{")
+        fmt = f"{self.black + self.bold}%(asctime)s{self.reset} {log_color}%(levelname)-8s{self.reset} {self.green + self.bold}%(name)s{self.reset} %(message)s"
+        formatter = logging.Formatter(fmt, "%Y-%m-%d %H:%M:%S")
         return formatter.format(record)
 
 # Configure logger
@@ -44,7 +40,6 @@ logger.addHandler(console_handler)
 
 # --- Bot Setup ---
 intents = discord.Intents.default()
-intents.message_content = True
 
 class KnishBot(commands.Bot):
     def __init__(self):
@@ -56,23 +51,27 @@ class KnishBot(commands.Bot):
         )
 
     async def setup_hook(self):
-        # Register the slash command group
+        # Register command groups
         self.tree.add_command(CoolGroup(name="cool", description="Says if someone is cool"))
         
-        # Sync slash commands globally
-        logger.info("Syncing slash commands...")
-        synced = await self.tree.sync()
-        logger.info(f"Synced {len(synced)} slash command(s).")
-
 bot = KnishBot()
-activity = discord.Game(name="nothing. I'm napping.")
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=activity)
+    await bot.change_presence(activity=discord.Game(name="nothing. I'm napping."))
     logger.info(f"Logged in as: {bot.user}")
     logger.info(f"Running discord.py Version: {discord.__version__}")
     logger.info(f"Running Python Version: {platform.python_version()}")
+
+
+# --- Developer Utility Commands ---
+
+@bot.command(name="sync")
+@commands.is_owner()
+async def sync(ctx: commands.Context):
+    """Command to manually sync slash commands globally."""
+    synced = await bot.tree.sync()
+    await ctx.send(f"Synced {len(synced)} command(s) globally.")
 
 
 # --- General Commands (Slash Commands) ---
@@ -119,7 +118,6 @@ class CoolGroup(app_commands.Group):
 
     @app_commands.command(name="check", description="Check if someone else is cool")
     async def cool_check(self, interaction: discord.Interaction, name: str):
-        # Default behavior for any custom name input
         await interaction.response.send_message(f"Growl..! ({name})")
 
 
