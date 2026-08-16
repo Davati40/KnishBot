@@ -87,6 +87,22 @@ async def sync(ctx: commands.Context, guild_only: bool = False):
         synced = await bot.tree.sync()
         await ctx.send(f"Synced {len(synced)} command(s) globally.")
 
+@bot.command(name="clearguild")
+@commands.is_owner()
+async def clear_guild(ctx: commands.Context):
+    """Clears all guild-specific slash commands for the current server."""
+    bot.tree.clear_commands(guild=ctx.guild)
+    await bot.tree.sync(guild=ctx.guild)
+    await ctx.send(f"Cleared all guild slash commands for **{ctx.guild.name}**.")
+
+@bot.command(name="clearglobal")
+@commands.is_owner()
+async def clear_global(ctx: commands.Context):
+    """Clears all global slash commands."""
+    bot.tree.clear_commands(guild=None)
+    await bot.tree.sync()
+    await ctx.send("Cleared all global slash commands.")
+
 # --- General Commands (Slash Commands) ---
 
 @bot.tree.command(name="hi", description="Say Hi To Knish")
