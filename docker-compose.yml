@@ -5,3 +5,4 @@ services:
     restart: unless-stopped
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DEFAULT_MC_SERVER${DEFAULT_MC_SERVER}
