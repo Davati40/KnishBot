@@ -1,12 +1,7 @@
 services:
   knishbot:
-    image: python:latest
+    build: .
     container_name: knishbot
     restart: unless-stopped
-    working_dir: /app
-    volumes:
-      - $PORTAINER_WORKING_DIR:/app
     environment:
       - DISCORD_TOKEN=NDEzNzI4MDU5NjQ1MTAwMDM5.GKQei8._VtA7JRbadJOcTP3YJxsnlevCRnkVayQnseEzs
-    command: >
-      sh -c "pip install --no-cache-dir -r requirements.txt && python bot.py"
