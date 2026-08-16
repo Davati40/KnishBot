@@ -73,11 +73,19 @@ async def on_ready():
 
 @bot.command(name="sync")
 @commands.is_owner()
-async def sync(ctx: commands.Context):
-    """Command to manually sync slash commands globally."""
-    synced = await bot.tree.sync()
-    await ctx.send(f"Synced {len(synced)} command(s) globally.")
-
+async def sync(ctx: commands.Context, guild_only: bool = False):
+    """
+    Usage:
+      $sync       -> Syncs globally (takes up to 1 hr to appear)
+      $sync true  -> Syncs INSTANTLY to the current Discord server
+    """
+    if guild_only:
+        bot.tree.copy_global_to(guild=ctx.guild)
+        synced = await bot.tree.sync(guild=ctx.guild)
+        await ctx.send(f"Synced {len(synced)} command(s) instantly to **{ctx.guild.name}**!")
+    else:
+        synced = await bot.tree.sync()
+        await ctx.send(f"Synced {len(synced)} command(s) globally.")
 
 # --- General Commands (Slash Commands) ---
 
