@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 import discord
 from discord import app_commands
@@ -8,24 +9,46 @@ from mcstatus import BedrockServer, JavaServer
 logger = logging.getLogger("discord_bot")
 
 DEFAULT_MC_SERVER = os.getenv("DEFAULT_MC_SERVER", "localhost")
+DATA_FILE = "servers.json"
 
 class MinecraftCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        # Track channel IDs in memory (Optional: persistent DB/JSON storage can be added)
-        self.status_channel_id: int | None = None
+        # Structure: { channel_id_str: {"address": "play.hypixel.net", "bedrock": False, "category_id": 123456} }
+        self.monitored_servers = self.load_servers()
         self.update_status_task.start()
 
     def cog_unload(self):
         self.update_status_task.cancel()
 
+    # --- PERSISTENCE LOGIC ---
+    def load_servers(self) -> dict:
+        if os.path.exists(DATA_FILE):
+            try:
+                with open(DATA_FILE, "r") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Failed to load {DATA_FILE}: {e}")
+        return {}
+
+    def save_servers(self):
+        try:
+            with open(DATA_FILE, "w") as f:
+                json.dump(self.monitored_servers, f, indent=4)
+        except Exception as e:
+            logger.error(f"Failed to save {DATA_FILE}: {e}")
+
     # --- SETUP COMMAND ---
     @app_commands.command(
         name="mcsetup",
-        description="Creates a locked voice channel that displays live MC server status"
+        description="Create a category and status channel for a Minecraft server"
+    )
+    @app_commands.describe(
+        address="The IP/domain of the server (e.g., play.hypixel.net)",
+        bedrock="Set to True if this is a Bedrock server (default: False)"
     )
     @app_commands.checks.has_permissions(administrator=True)
-    async def mcsetup(self, interaction: discord.Interaction):
+    async def mcsetup(self, interaction: discord.Interaction, address: str = DEFAULT_MC_SERVER, bedrock: bool = False):
         await interaction.response.defer()
 
         guild = interaction.guild
@@ -33,10 +56,9 @@ class MinecraftCog(commands.Cog):
             await interaction.followup.send("This command can only be used in a server.")
             return
 
-        # 1. Lock down connect permissions for @everyone
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(
-                connect=False, # Nobody can join
+                connect=False,    # Nobody can join
                 view_channel=True # Everyone can see
             ),
             guild.me: discord.PermissionOverwrite(
@@ -46,24 +68,68 @@ class MinecraftCog(commands.Cog):
             )
         }
 
-        # 2. Create Category and Locked Voice Channel
-        category = await guild.create_category("Minecraft Status")
+        # 1. Create Category titled with the IP
+        category_name = f"IP: {address}"
+        category = await guild.create_category(name=category_name)
+
+        # 2. Create Locked Voice Channel under the category
         channel = await guild.create_voice_channel(
             name="MC: Fetching...",
             category=category,
             overwrites=overwrites
         )
 
-        self.status_channel_id = channel.id
-        await interaction.followup.send(
-            f"✅ Created status channel {channel.mention}! Status will update every 5 minutes."
-        )
-        
-        # Trigger an immediate check
-        await self.update_channel_status()
+        # 3. Store server configuration
+        self.monitored_servers[str(channel.id)] = {
+            "address": address,
+            "bedrock": bedrock,
+            "category_id": category.id
+        }
+        self.save_servers()
 
-    # --- PING & UPDATE LOGIC ---
-    async def fetch_server_status(self, address: str = DEFAULT_MC_SERVER, bedrock: bool = False):
+        await interaction.followup.send(
+            f"✅ Created category **{category_name}** and channel {channel.mention}! Status will update every 5 minutes."
+        )
+
+        # Immediately update the new channel
+        await self.update_single_channel(str(channel.id), address, bedrock)
+
+    # --- REMOVE COMMAND ---
+    @app_commands.command(
+        name="mcremove",
+        description="Stop monitoring a Minecraft server and remove its category/channel"
+    )
+    @app_commands.describe(address="The IP address of the server to remove")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def mcremove(self, interaction: discord.Interaction, address: str):
+        await interaction.response.defer()
+
+        to_delete = None
+        for channel_id, data in self.monitored_servers.items():
+            if data["address"].lower() == address.lower():
+                to_delete = channel_id
+                break
+
+        if not to_delete:
+            await interaction.followup.send(f"No monitored server found with IP `{address}`.")
+            return
+
+        data = self.monitored_servers.pop(to_delete)
+        self.save_servers()
+
+        # Delete channel and category from Discord
+        channel = self.bot.get_channel(int(to_delete))
+        if channel:
+            await channel.delete()
+
+        category = self.bot.get_channel(data.get("category_id"))
+        if category:
+            await category.delete()
+
+        await interaction.followup.send(f"🗑️ Stopped monitoring **{address}** and removed its category/channel.")
+
+    # --- STATUS UPDATE LOGIC ---
+    async def fetch_server_status(self, address: str, bedrock: bool = False) -> str:
         try:
             if bedrock:
                 server = await BedrockServer.async_lookup(address)
@@ -71,53 +137,49 @@ class MinecraftCog(commands.Cog):
             else:
                 server = await JavaServer.async_lookup(address)
                 status = await server.async_status()
-            
+
             return f"MC: 🟢 {status.players.online}/{status.players.max} Online"
         except Exception:
             return "MC: 🔴 Server Offline"
 
-    async def update_channel_status(self):
-        if not self.status_channel_id:
-            return
-
-        channel = self.bot.get_channel(self.status_channel_id)
+    async def update_single_channel(self, channel_id_str: str, address: str, bedrock: bool):
+        channel = self.bot.get_channel(int(channel_id_str))
         if not channel or not isinstance(channel, discord.VoiceChannel):
             return
 
-        new_name = await self.fetch_server_status()
+        new_name = await self.fetch_server_status(address, bedrock)
 
-        # Only update if the channel name actually changed to prevent API fatigue
         if channel.name != new_name:
             try:
                 await channel.edit(name=new_name)
-                logger.info(f"Updated MC status channel to: {new_name}")
+                logger.info(f"Updated status for [{address}] in channel {channel.id} -> {new_name}")
             except discord.HTTPException as e:
-                logger.error(f"Failed to edit status channel: {e}")
+                logger.error(f"Failed to edit status channel for {address}: {e}")
 
-    # --- BACKGROUND LOOP (Runs every 5 minutes) ---
+    # --- BACKGROUND LOOP (Every 5 Minutes) ---
     @tasks.loop(minutes=5)
     async def update_status_task(self):
-        await self.update_channel_status()
+        for channel_id_str, data in list(self.monitored_servers.items()):
+            await self.update_single_channel(
+                channel_id_str, 
+                data["address"], 
+                data.get("bedrock", False)
+            )
 
     @update_status_task.before_loop
     async def before_status_task(self):
         await self.bot.wait_until_ready()
 
-    # --- MANUAL CHECK COMMAND ---
+    # --- ON-DEMAND CHECK COMMAND ---
     @app_commands.command(
         name="mcstatus",
-        description="Check the status of a Minecraft server"
+        description="Check the status of a Minecraft server on demand"
     )
     @app_commands.describe(
         address="The IP/domain of the server (Leave blank for default server)",
-        bedrock="Set to True if this is a Bedrock/MCPE server (default: False)"
+        bedrock="Set to True if this is a Bedrock server (default: False)"
     )
-    async def mcstatus(
-        self, 
-        interaction: discord.Interaction, 
-        address: str = DEFAULT_MC_SERVER, 
-        bedrock: bool = False
-    ):
+    async def mcstatus(self, interaction: discord.Interaction, address: str = DEFAULT_MC_SERVER, bedrock: bool = False):
         await interaction.response.defer()
 
         try:
